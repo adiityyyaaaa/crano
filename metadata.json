@@ -1,0 +1,8 @@
+{
+  "name": "Crano - EdTech Tutor Marketplace",
+  "description": "A high-end ed-tech marketplace connecting students with world-class teachers through video demos, transparent ratings, and YouTube integration.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
