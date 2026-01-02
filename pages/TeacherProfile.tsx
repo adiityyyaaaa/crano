@@ -3,6 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import PaymentModal from '../components/PaymentModal';
 import ChatModal from '../components/ChatModal';
+import PackageSelector from '../components/PackageSelector';
+import DaySelector from '../components/DaySelector';
+import BookingSummary from '../components/BookingSummary';
 import {
   Star,
   Video,
@@ -59,6 +62,14 @@ const TeacherProfile: React.FC = () => {
 
   const [teacherBookings, setTeacherBookings] = useState<any[]>([]);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
+  const [bookedSlots, setBookedSlots] = useState<{ [key: string]: any }>({});
+  const currentUserName = localStorage.getItem('userName') || '';
+
+  // Package booking states
+  const [bookingMode, setBookingMode] = useState<'single' | 'weekly' | 'monthly'>('single');
+  const [bookingStep, setBookingStep] = useState<'package' | 'days' | 'time' | 'summary'>('package');
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [packageStartDate, setPackageStartDate] = useState<Date>(new Date());
 
   // ---------------------------------------------------------------------------
   // CALENDAR UI HELPER & HOOKS (Moved to top to satisfy Rules of Hooks)
@@ -86,22 +97,75 @@ const TeacherProfile: React.FC = () => {
     return teacher.availability.days.includes(dayName);
   };
 
-  // Fetch available time slots when date changes
+  // Generate calendar days for display (calendar grid with proper structure)
+  const generateCalendarDays = () => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    // Get first day of current month
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const startingDayOfWeek = firstDay.getDay(); // 0 = Sunday
+
+    // Get number of days in current month
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    const days: Array<{ date: Date | null; dayNum: number | null }> = [];
+
+    // Add empty cells for days before month starts
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push({ date: null, dayNum: null });
+    }
+
+    // Add actual days of the month (starting from today)
+    const todayDate = today.getDate();
+    for (let day = todayDate; day <= daysInMonth; day++) {
+      const date = new Date(currentYear, currentMonth, day);
+      days.push({ date, dayNum: day });
+    }
+
+    // Add days from next month if needed to complete the grid
+    const remainingCells = 35 - days.length; // 5 weeks * 7 days
+    if (remainingCells > 0) {
+      for (let day = 1; day <= remainingCells; day++) {
+        const date = new Date(currentYear, currentMonth + 1, day);
+        days.push({ date, dayNum: day });
+      }
+    }
+
+    return days;
+  };
+
+  const calendarDays = generateCalendarDays();
+
+  // Helper to check if a specific date is available (checks day of week against teacher availability)
+  const isDateAvailable = (date: Date) => {
+    // Check if date is in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date < today) return false;
+
+    // Check if teacher is available on this day of the week
+    return isDayAvailable(date);
+  };
+
+  // Fetch available time slots and bookings when date changes
   useEffect(() => {
-    const fetchAvailableSlots = async () => {
+    const fetchSlotsAndBookings = async () => {
       if (!teacher || !selectedDate) return;
 
       try {
         const dateStr = selectedDate.toISOString().split('T')[0];
-        const response = await fetch(`/api/teachers/${teacher._id}/availability?date=${dateStr}`);
 
-        if (response.ok) {
-          const data = await response.json();
+        // Fetch available slots
+        const slotsResponse = await fetch(`/api/teachers/${teacher._id}/availability?date=${dateStr}`);
+
+        if (slotsResponse.ok) {
+          const data = await slotsResponse.json();
           setAvailableTimeSlots(data.availableSlots || []);
         } else {
           // Fallback to teacher's hours if endpoint fails
           if (teacher.hours && teacher.hours.length > 0) {
-            // Convert hour ranges to time format
             const formattedSlots = teacher.hours.map((hourRange: string) => {
               const [start] = hourRange.split('-').map(h => parseInt(h));
               const hour = start % 12 || 12;
@@ -113,14 +177,133 @@ const TeacherProfile: React.FC = () => {
             setAvailableTimeSlots(['09:00 AM', '10:00 AM', '11:00 AM', '02:00 PM', '04:00 PM']);
           }
         }
+
+        // Fetch all bookings for this teacher on this date
+        const bookingsResponse = await fetch(`/api/bookings/${teacher._id}`);
+        if (bookingsResponse.ok) {
+          const allBookings = await bookingsResponse.json();
+          // Filter bookings for selected date and create a map
+          const dateBookings: { [key: string]: any } = {};
+          allBookings.forEach((booking: any) => {
+            if (booking.date === dateStr) {
+              dateBookings[booking.time] = booking;
+            }
+          });
+          setBookedSlots(dateBookings);
+        }
       } catch (error) {
-        console.error('Failed to fetch available slots:', error);
+        console.error('Failed to fetch slots and bookings:', error);
         setAvailableTimeSlots(['09:00 AM', '10:00 AM', '11:00 AM', '02:00 PM', '04:00 PM']);
       }
     };
 
-    fetchAvailableSlots();
+    fetchSlotsAndBookings();
   }, [teacher, selectedDate]);
+
+  // Package booking handlers
+  const handlePackageBooking = async () => {
+    if (!teacher || !selectedTime) return;
+
+    setIsBooking(true);
+    try {
+      const token = localStorage.getItem('token');
+
+      // Calculate pricing
+      const numberOfClasses = bookingMode === 'single' ? 1 : selectedDays.length;
+      const discounts = { single: 0, weekly: 10, monthly: 20 };
+      const discount = discounts[bookingMode];
+      const totalPrice = teacher.price * numberOfClasses;
+      const finalPrice = totalPrice * (1 - discount / 100);
+
+      // Create package
+      const response = await fetch('/api/packages/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          teacherId: teacher._id,
+          teacherName: teacher.name,
+          subject: teacher.subject,
+          packageType: bookingMode,
+          selectedDays: bookingMode === 'single' ? [selectedDate?.toLocaleDateString('en-US', { weekday: 'short' }) || 'Mon'] : selectedDays,
+          sameTimeDaily: true,
+          defaultStartTime: selectedTime,
+          pricePerClass: teacher.price,
+          startDate: packageStartDate
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Format the start date and time for the payment modal
+        const startDate = new Date(data.package.startDate);
+        const formattedDate = startDate.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+
+        setCurrentBooking({
+          _id: data.package._id,
+          teacherName: data.package.teacherName,
+          subject: data.package.subject,
+          date: formattedDate,
+          time: data.package.defaultStartTime,
+          price: data.pricing.basePrice,
+          isPackage: true,
+          packageType: data.package.packageType,
+          totalClasses: data.pricing.totalClasses,
+          finalPrice: data.pricing.finalPrice
+        });
+        setShowPaymentModal(true);
+      } else {
+        const error = await response.json();
+        alert('Booking failed: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Package booking error:', error);
+      alert('Failed to create booking. Please try again.');
+    } finally {
+      setIsBooking(false);
+    }
+  };
+
+  const handleNextStep = () => {
+    if (bookingStep === 'package' && bookingMode !== 'single') {
+      setBookingStep('days');
+    } else if (bookingStep === 'days') {
+      setBookingStep('time');
+    } else if (bookingStep === 'time') {
+      setBookingStep('summary');
+    }
+  };
+
+  const handleBackStep = () => {
+    if (bookingStep === 'summary') {
+      setBookingStep('time');
+    } else if (bookingStep === 'time') {
+      if (bookingMode === 'single') {
+        setBookingStep('package');
+      } else {
+        setBookingStep('days');
+      }
+    } else if (bookingStep === 'days') {
+      setBookingStep('package');
+    }
+  };
+
+  const handlePackageSelect = (type: 'single' | 'weekly' | 'monthly') => {
+    setBookingMode(type);
+    if (type === 'single') {
+      setSelectedDays([]);
+      setBookingStep('time');
+    } else {
+      setBookingStep('days');
+    }
+  };
 
   const handleBookSession = async () => {
     if (!teacher) return;
@@ -193,6 +376,22 @@ const TeacherProfile: React.FC = () => {
         if (!teacherRes.ok) throw new Error('Teacher not found');
 
         const teacherData = await teacherRes.json();
+
+        // Map teacher.days to teacher.availability.days for consistency
+        // If teacher.days exists, use it; otherwise default to all 7 days
+        if (teacherData.days && teacherData.days.length > 0) {
+          teacherData.availability = {
+            days: teacherData.days,
+            hours: teacherData.hours ? { start: teacherData.hours[0], end: teacherData.hours[teacherData.hours.length - 1] } : { start: '09:00', end: '18:00' }
+          };
+        } else {
+          // Default to all 7 days if not specified
+          teacherData.availability = {
+            days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            hours: { start: '09:00', end: '18:00' }
+          };
+        }
+
         setTeacher(teacherData);
 
         if (bookingsRes.ok) {
@@ -296,19 +495,6 @@ const TeacherProfile: React.FC = () => {
             </div>
           </div>
 
-          {/* Video Demo */}
-          <div className="bg-slate-900 rounded-[2.5rem] overflow-hidden relative shadow-2xl aspect-video group cursor-pointer">
-            <iframe
-              src={teacher.videoUrl}
-              title="Teacher Demo"
-              className="w-full h-full opacity-60 group-hover:opacity-100 transition-opacity"
-              allowFullScreen
-            />
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none group-hover:opacity-0 transition-opacity">
-              <PlayCircle size={80} className="text-white mb-4 animate-pulse" />
-              <span className="text-white font-black text-2xl uppercase tracking-widest">Watch My Teaching Demo</span>
-            </div>
-          </div>
 
           {/* Details Tabs */}
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8">
@@ -368,6 +554,22 @@ const TeacherProfile: React.FC = () => {
               </div>
             )}
 
+            {teacher.videoUrl && (
+              <div className="bg-white rounded-[2rem] p-8 shadow-xl border border-slate-100">
+                <h3 className="text-2xl font-black text-slate-900 mb-6">Introduction Video</h3>
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl" style={{ paddingBottom: '56.25%' }}>
+                  <iframe
+                    src={teacher.videoUrl.replace('youtube.com', 'youtube-nocookie.com').replace('watch?v=', 'embed/') + '?rel=0&modestbranding=1'}
+                    title="Teacher Introduction"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="absolute top-0 left-0 w-full h-full"
+                  />
+                </div>
+              </div>
+            )}
+
             {activeTab === 'schedule' && (
               <div className="space-y-8 animate-fade-in">
                 <div>
@@ -401,21 +603,49 @@ const TeacherProfile: React.FC = () => {
                     <h3 className="text-xl font-black text-slate-900 mb-4">Available Time Slots</h3>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
                       {availableTimeSlots.map((time, i) => {
-                        const booked = selectedDate ? isSlotBooked(selectedDate, time) : false;
+                        const booking = bookedSlots[time];
+                        const isBooked = !!booking;
+                        const isUserBooking = isBooked && booking.studentName === currentUserName;
+                        const isPastTime = selectedDate && new Date(`${selectedDate.toISOString().split('T')[0]}T${time}`) < new Date();
+
+                        // Determine button state and style
+                        let buttonClass = '';
+                        let buttonText = time;
+                        let isDisabled = false;
+                        let badge = null;
+
+                        if (isPastTime) {
+                          // Past time - faded and disabled
+                          buttonClass = 'bg-slate-100 text-slate-300 cursor-not-allowed opacity-50';
+                          isDisabled = true;
+                        } else if (isUserBooking) {
+                          // User's booking - blue/highlighted
+                          buttonClass = 'bg-blue-100 text-blue-700 border-2 border-blue-500 ring-2 ring-blue-200';
+                          badge = <span className="text-xs font-bold">Your Booking</span>;
+                        } else if (isBooked) {
+                          // Booked by someone else - grey/disabled
+                          buttonClass = 'bg-slate-200 text-slate-400 cursor-not-allowed';
+                          isDisabled = true;
+                          badge = <span className="text-xs font-bold text-slate-500">Booked</span>;
+                        } else {
+                          // Available - green/clickable
+                          buttonClass = selectedTime === time
+                            ? 'bg-green-600 text-white border-2 border-green-700 shadow-lg'
+                            : 'bg-green-50 text-green-700 border-2 border-green-200 hover:bg-green-100 hover:border-green-400';
+                        }
+
                         return (
                           <button
                             key={i}
-                            disabled={booked}
-                            onClick={() => setSelectedTime(time)}
-                            className={`py-3 rounded-xl text-sm font-bold border transition-all ${selectedTime === time
-                              ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                              : booked
-                                ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed decoration-slice'
-                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400'
-                              }`}
+                            type="button"
+                            onClick={() => !isDisabled && setSelectedTime(time)}
+                            disabled={isDisabled}
+                            className={`py-4 px-3 rounded-xl text-sm font-bold transition-all ${buttonClass}`}
                           >
-                            {time}
-                            {booked && <span className="block text-[8px] font-normal uppercase text-red-300">Booked</span>}
+                            <div className="flex flex-col items-center gap-1">
+                              <span>{buttonText}</span>
+                              {badge}
+                            </div>
                           </button>
                         );
                       })}
@@ -430,6 +660,169 @@ const TeacherProfile: React.FC = () => {
         {/* Right Col: Booking Card */}
         <div className="lg:col-span-1">
           {!bookingSuccess ? (
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-100 sticky top-28 space-y-8 animate-in fade-in zoom-in-95 duration-500">
+              {/* Package Selection Step */}
+              {bookingStep === 'package' && (
+                <PackageSelector
+                  teacherPrice={teacher.price}
+                  selectedPackage={bookingMode}
+                  onSelect={handlePackageSelect}
+                />
+              )}
+
+              {/* Day Selection Step */}
+              {bookingStep === 'days' && bookingMode !== 'single' && (
+                <div className="space-y-6">
+                  <DaySelector
+                    selectedDays={selectedDays}
+                    onDaysChange={setSelectedDays}
+                    teacherAvailability={teacher.availability?.days || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']}
+                  />
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={handleBackStep}
+                      className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-200 transition-all"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={handleNextStep}
+                      disabled={selectedDays.length === 0}
+                      className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Time Selection Step */}
+              {bookingStep === 'time' && (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <h3 className="text-2xl font-black text-slate-900 mb-2">Select Date & Time</h3>
+                    <p className="text-slate-500 font-medium">Choose when you want to start</p>
+                  </div>
+
+                  {/* Calendar */}
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900 mb-4">Select Start Date</h4>
+                    <div className="grid grid-cols-7 gap-2">
+                      {calendarDays.map((day, i) => {
+                        const isAvailable = day.date && isDateAvailable(day.date);
+                        const isSelected = day.date && selectedDate && day.date.toDateString() === selectedDate.toDateString();
+
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => day.date && isAvailable && setSelectedDate(day.date)}
+                            disabled={!day.date || !isAvailable}
+                            className={`aspect-square rounded-xl text-sm font-bold transition-all ${!day.date
+                              ? 'invisible'
+                              : !isAvailable
+                                ? 'bg-slate-50 text-slate-300 cursor-not-allowed'
+                                : isSelected
+                                  ? 'bg-blue-600 text-white shadow-lg scale-105'
+                                  : 'bg-white border-2 border-slate-200 text-slate-700 hover:border-blue-300'
+                              }`}
+                          >
+                            {day.date?.getDate()}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Time Slots */}
+                  {selectedDate && (
+                    <div className="animate-in slide-in-from-top-4 duration-300">
+                      <h3 className="text-xl font-black text-slate-900 mb-4">Available Time Slots</h3>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+                        {availableTimeSlots.map((time, i) => {
+                          const booking = bookedSlots[time];
+                          const isBooked = !!booking;
+                          const isUserBooking = isBooked && booking.studentName === currentUserName;
+                          const isPastTime = selectedDate && new Date(`${selectedDate.toISOString().split('T')[0]}T${time}`) < new Date();
+
+                          let buttonClass = '';
+                          let isDisabled = false;
+                          let badge = null;
+
+                          if (isPastTime) {
+                            buttonClass = 'bg-slate-100 text-slate-300 cursor-not-allowed opacity-50';
+                            isDisabled = true;
+                          } else if (isUserBooking) {
+                            buttonClass = 'bg-blue-100 text-blue-700 border-2 border-blue-500 ring-2 ring-blue-200';
+                            badge = <span className="text-xs font-bold">Your Booking</span>;
+                          } else if (isBooked) {
+                            buttonClass = 'bg-slate-200 text-slate-400 cursor-not-allowed';
+                            isDisabled = true;
+                            badge = <span className="text-xs font-bold text-slate-500">Booked</span>;
+                          } else {
+                            buttonClass = selectedTime === time
+                              ? 'bg-green-600 text-white border-2 border-green-700 shadow-lg'
+                              : 'bg-green-50 text-green-700 border-2 border-green-200 hover:bg-green-100 hover:border-green-400';
+                          }
+
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => !isDisabled && setSelectedTime(time)}
+                              disabled={isDisabled}
+                              className={`py-4 px-3 rounded-xl text-sm font-bold transition-all ${buttonClass}`}
+                            >
+                              <div className="flex flex-col items-center gap-1">
+                                <span>{time}</span>
+                                {badge}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedDate && selectedTime && (
+                    <div className="flex space-x-4 pt-4">
+                      <button
+                        onClick={handleBackStep}
+                        className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-200 transition-all"
+                      >
+                        Back
+                      </button>
+                      <button
+                        onClick={handleNextStep}
+                        className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all"
+                      >
+                        Review Booking
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Summary Step */}
+              {bookingStep === 'summary' && selectedTime && (
+                <BookingSummary
+                  packageType={bookingMode}
+                  selectedDays={bookingMode === 'single' ? [selectedDate?.toLocaleDateString('en-US', { weekday: 'short' }) || 'Mon'] : selectedDays}
+                  selectedTime={selectedTime}
+                  teacherName={teacher.name}
+                  subject={teacher.subject}
+                  pricePerClass={teacher.price}
+                  totalClasses={bookingMode === 'single' ? 1 : selectedDays.length}
+                  totalPrice={teacher.price * (bookingMode === 'single' ? 1 : selectedDays.length)}
+                  discountPercent={bookingMode === 'weekly' ? 10 : bookingMode === 'monthly' ? 20 : 0}
+                  finalPrice={teacher.price * (bookingMode === 'single' ? 1 : selectedDays.length) * (1 - (bookingMode === 'weekly' ? 0.1 : bookingMode === 'monthly' ? 0.2 : 0))}
+                  startDate={selectedDate || packageStartDate}
+                  onProceedToPayment={handlePackageBooking}
+                  onBack={handleBackStep}
+                  isProcessing={isBooking}
+                />
+              )}
+            </div>
+          ) : (
             <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-slate-100 sticky top-28 space-y-8 animate-in fade-in zoom-in-95 duration-500">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 font-bold">Standard Rate</span>
@@ -477,68 +870,34 @@ const TeacherProfile: React.FC = () => {
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-emerald-100 sticky top-28 text-center space-y-8 animate-in zoom-in-95 fade-in duration-500">
-              <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-                <CheckCircle2 size={40} strokeWidth={2.5} />
-              </div>
-              <div>
-                <h3 className="text-2xl font-black text-slate-900 mb-2">Session Confirmed!</h3>
-                <p className="text-slate-500 font-medium leading-relaxed">
-                  Your class with <span className="text-slate-900 font-bold">{teacher.name}</span> is scheduled for tomorrow at 10:00 AM.
-                </p>
-              </div>
-
-              <div className="p-5 bg-slate-50 rounded-2xl text-left border border-slate-100">
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Booking Details</div>
-                <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-slate-500">Subject</span>
-                  <span className="text-slate-900 font-bold">{teacher.subject}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">Amount Paid</span>
-                  <span className="text-slate-900 font-bold">₹{teacher.price}</span>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black hover:bg-black transition-all flex items-center justify-center space-x-2 shadow-lg"
-                >
-                  <span>Go to Dashboard</span>
-                  <ArrowRight size={18} />
-                </button>
-                <button className="w-full text-blue-600 font-black text-sm flex items-center justify-center space-x-2">
-                  <MessageSquare size={16} />
-                  <span>Message Teacher</span>
-                </button>
-              </div>
-            </div>
           )}
         </div>
       </div>
 
       {/* Payment Modal */}
-      {showPaymentModal && currentBooking && (
-        <PaymentModal
-          isOpen={showPaymentModal}
-          onClose={() => setShowPaymentModal(false)}
-          onSuccess={handlePaymentSuccess}
-          bookingDetails={currentBooking}
-        />
-      )}
+      {
+        showPaymentModal && currentBooking && (
+          <PaymentModal
+            isOpen={showPaymentModal}
+            onClose={() => setShowPaymentModal(false)}
+            onPaymentSuccess={handlePaymentSuccess}
+            booking={currentBooking}
+          />
+        )
+      }
 
       {/* Chat Modal */}
-      {showChatModal && teacher && (
-        <ChatModal
-          isOpen={showChatModal}
-          onClose={() => setShowChatModal(false)}
-          otherUserId={String(teacher._id || teacher.id)}
-          otherUserName={teacher.name}
-          otherUserRole="teacher"
-        />
-      )}
+      {
+        showChatModal && teacher && (
+          <ChatModal
+            isOpen={showChatModal}
+            onClose={() => setShowChatModal(false)}
+            otherUserId={String(teacher._id || teacher.id)}
+            otherUserName={teacher.name}
+            otherUserRole="teacher"
+          />
+        )
+      }
     </div>
   );
 };

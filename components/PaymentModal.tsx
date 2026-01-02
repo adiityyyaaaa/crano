@@ -4,15 +4,19 @@ import { X, CreditCard, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 interface PaymentModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSuccess: () => void;
-    bookingDetails: {
-        bookingId: string;
+    booking: {
+        _id: string;
         teacherName: string;
         subject: string;
         date: string;
         time: string;
         price: number;
+        isPackage?: boolean;
+        packageType?: 'single' | 'weekly' | 'monthly';
+        totalClasses?: number;
+        finalPrice?: number;
     };
+    onPaymentSuccess: () => void;
 }
 
 declare global {
@@ -21,10 +25,16 @@ declare global {
     }
 }
 
-const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onSuccess, bookingDetails }) => {
-    const [isProcessing, setIsProcessing] = useState(false);
+const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentSuccess, booking }) => {
+    const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle');
     const [error, setError] = useState<string | null>(null);
     const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+
+    const isPackageBooking = booking.isPackage || false;
+    const displayPrice = isPackageBooking ? (booking.finalPrice || booking.price) : booking.price;
+    const displayTitle = isPackageBooking
+        ? `${booking.packageType?.charAt(0).toUpperCase()}${booking.packageType?.slice(1)} Package`
+        : 'Single Class';
 
     useEffect(() => {
         // Load Razorpay script
@@ -47,7 +57,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onSuccess,
             return;
         }
 
-        setIsProcessing(true);
+        setPaymentStatus('processing');
         setError(null);
 
         try {
@@ -56,8 +66,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onSuccess,
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    bookingId: bookingDetails.bookingId,
-                    amount: bookingDetails.price
+                    bookingId: booking._id,
+                    amount: displayPrice
                 })
             });
 
@@ -73,7 +83,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onSuccess,
                 amount: orderData.amount,
                 currency: orderData.currency,
                 name: 'Crano Education',
-                description: `Booking for ${bookingDetails.subject} with ${bookingDetails.teacherName}`,
+                description: `${displayTitle} - ${booking.subject} with ${booking.teacherName} `,
                 order_id: orderData.orderId,
                 handler: async function (response: any) {
                     try {
@@ -85,7 +95,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onSuccess,
                                 razorpay_order_id: response.razorpay_order_id,
                                 razorpay_payment_id: response.razorpay_payment_id,
                                 razorpay_signature: response.razorpay_signature,
-                                bookingId: bookingDetails.bookingId
+                                bookingId: booking._id
                             })
                         });
 
@@ -93,12 +103,12 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onSuccess,
                             throw new Error('Payment verification failed');
                         }
 
-                        setIsProcessing(false);
-                        onSuccess();
+                        setPaymentStatus('success');
+                        onPaymentSuccess();
                     } catch (error) {
                         console.error('Payment verification error:', error);
                         setError('Payment verification failed. Please contact support.');
-                        setIsProcessing(false);
+                        setPaymentStatus('failed');
                     }
                 },
                 prefill: {
@@ -110,14 +120,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onSuccess,
                 },
                 modal: {
                     ondismiss: function () {
-                        setIsProcessing(false);
+                        setPaymentStatus('idle');
                         // Record payment failure
                         fetch('/api/payment/failure', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 orderId: orderData.orderId,
-                                bookingId: bookingDetails.bookingId
+                                bookingId: booking._id
                             })
                         });
                     }
@@ -129,9 +139,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onSuccess,
         } catch (error: any) {
             console.error('Payment error:', error);
             setError(error.message || 'Payment failed. Please try again.');
-            setIsProcessing(false);
+            setPaymentStatus('failed');
         }
     };
+
+    const isProcessing = paymentStatus === 'processing';
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -168,27 +180,33 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onSuccess,
                     <div className="bg-slate-50 rounded-2xl p-6 mb-8 space-y-3">
                         <div className="flex justify-between text-sm">
                             <span className="text-slate-500">Teacher</span>
-                            <span className="font-bold text-slate-900">{bookingDetails.teacherName}</span>
+                            <span className="font-bold text-slate-900">{booking.teacherName}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                             <span className="text-slate-500">Subject</span>
-                            <span className="font-bold text-slate-900">{bookingDetails.subject}</span>
+                            <span className="font-bold text-slate-900">{booking.subject}</span>
                         </div>
+                        {isPackageBooking && booking.totalClasses && (
+                            <div className="flex justify-between text-sm">
+                                <span className="text-slate-500">Classes</span>
+                                <span className="font-bold text-slate-900">{booking.totalClasses} sessions</span>
+                            </div>
+                        )}
                         <div className="flex justify-between text-sm">
-                            <span className="text-slate-500">Date & Time</span>
-                            <span className="font-bold text-slate-900">{bookingDetails.date} • {bookingDetails.time}</span>
+                            <span className="text-slate-500">{isPackageBooking ? 'Starts' : 'Date & Time'}</span>
+                            <span className="font-bold text-slate-900">{booking.date} • {booking.time}</span>
                         </div>
                         <div className="border-t border-slate-200 pt-3 mt-3 flex justify-between">
                             <span className="text-slate-900 font-bold">Total Amount</span>
-                            <span className="text-2xl font-black text-blue-600">₹{bookingDetails.price}</span>
+                            <span className="text-2xl font-black text-blue-600">₹{displayPrice}</span>
                         </div>
                     </div>
 
                     <button
                         onClick={handlePayment}
                         disabled={isProcessing || !razorpayLoaded}
-                        className={`w-full bg-blue-600 text-white py-4 rounded-xl font-black text-lg hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center space-x-2 ${(isProcessing || !razorpayLoaded) ? 'opacity-80 cursor-not-allowed' : ''
-                            }`}
+                        className={`w - full bg - blue - 600 text - white py - 4 rounded - xl font - black text - lg hover: bg - blue - 700 transition - all shadow - lg shadow - blue - 100 flex items - center justify - center space - x - 2 ${(isProcessing || !razorpayLoaded) ? 'opacity-80 cursor-not-allowed' : ''
+                            } `}
                     >
                         {isProcessing ? (
                             <>
@@ -200,7 +218,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onSuccess,
                         ) : (
                             <>
                                 <CreditCard size={20} />
-                                <span>Pay ₹{bookingDetails.price}</span>
+                                <span>Pay ₹{displayPrice}</span>
                             </>
                         )}
                     </button>

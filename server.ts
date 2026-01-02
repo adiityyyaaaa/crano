@@ -8,6 +8,7 @@ import bookingRoutes from './routes/booking';
 import teacherRoutes from './routes/teacher';
 import paymentRoutes from './routes/payment';
 import chatRoutes from './routes/chat';
+import packageRoutes from './routes/package';
 
 // Load environment variables
 dotenv.config();
@@ -37,6 +38,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/teachers', teacherRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/packages', packageRoutes);
 
 // Basic Health Check / Root
 app.get('/', (req: Request, res: Response) => {

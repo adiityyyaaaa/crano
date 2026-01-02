@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import ChatModal from '../components/ChatModal';
 import {
   Calendar,
   Clock,
@@ -28,6 +29,10 @@ const Dashboard: React.FC = () => {
     rating: 0,
     reviews: 0
   });
+
+  // Chat modal state
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [chatUser, setChatUser] = useState<{ id: string, name: string, role: 'student' | 'teacher' } | null>(null);
 
   const role = localStorage.getItem('userRole') || 'student';
   const userName = localStorage.getItem('userName') || 'User';
@@ -107,6 +112,36 @@ const Dashboard: React.FC = () => {
       fetchTeacherData();
     }
   }, [role]);
+
+  // Fetch student bookings for teachers who also learn
+  useEffect(() => {
+    if (role === 'teacher') {
+      const fetchStudentBookings = async () => {
+        try {
+          const url = `/api/bookings/student/${encodeURIComponent(userName)}`;
+          const response = await fetch(url);
+
+          if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data)) {
+              setBookings(data);
+            } else {
+              console.error('Expected array but got:', data);
+              setBookings([]);
+            }
+          } else {
+            console.error('Failed to fetch student bookings for teacher');
+            setBookings([]);
+          }
+        } catch (error) {
+          console.error('Error fetching student bookings:', error);
+          setBookings([]);
+        }
+      };
+
+      fetchStudentBookings();
+    }
+  }, [role, userName]);
 
   // Calculate student stats
   const totalSpent = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
@@ -217,7 +252,17 @@ const Dashboard: React.FC = () => {
                       <button className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-black transition-all text-sm shadow-lg">
                         Start Class
                       </button>
-                      <button className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-600 transition-all">
+                      <button
+                        onClick={() => {
+                          setChatUser({
+                            id: booking.studentId || booking._id,
+                            name: booking.studentName,
+                            role: 'student'
+                          });
+                          setShowChatModal(true);
+                        }}
+                        className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-600"
+                      >
                         <MessageSquare size={20} />
                       </button>
                     </div>
@@ -231,7 +276,79 @@ const Dashboard: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* My Learning Section - Show bookings where teacher is a student */}
+          {bookings.length > 0 && (
+            <div className="bg-white rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden mt-8">
+              <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600">
+                    <BookOpen size={24} />
+                  </div>
+                  <h2 className="text-2xl font-black text-slate-900">My Learning</h2>
+                </div>
+                <Link to="/discover" className="text-purple-600 font-bold text-sm hover:underline">
+                  Book More Classes
+                </Link>
+              </div>
+              <div className="divide-y divide-slate-50">
+                {bookings.map((booking, i) => (
+                  <div key={booking._id || i} className="p-8 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                    <div className="flex items-center space-x-5">
+                      <div className="w-14 h-14 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center shadow-inner font-black text-lg">
+                        {booking.teacherName.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="font-black text-lg text-slate-900">{booking.teacherName}</div>
+                        <div className="text-slate-500 text-sm font-medium">{booking.subject}</div>
+                        <div className="text-purple-600 text-sm font-black mt-1">{booking.date} • {booking.time}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span className={`px-4 py-2 rounded-full text-xs font-black uppercase ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                          booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-red-100 text-red-700'
+                        }`}>
+                        {booking.status}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setChatUser({
+                            id: booking.teacherId || booking._id,
+                            name: booking.teacherName,
+                            role: 'teacher'
+                          });
+                          setShowChatModal(true);
+                        }}
+                        className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-all"
+                        title="Chat with teacher"
+                      >
+                        <MessageSquare size={20} />
+                      </button>
+                      <button className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all text-sm shadow-lg">
+                        Join Class
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Chat Modal */}
+        {showChatModal && chatUser && (
+          <ChatModal
+            isOpen={showChatModal}
+            onClose={() => {
+              setShowChatModal(false);
+              setChatUser(null);
+            }}
+            otherUserId={chatUser.id}
+            otherUserName={chatUser.name}
+            otherUserRole={chatUser.role}
+          />
+        )}
       </div>
     );
   }
@@ -298,11 +415,25 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div className="flex items-center space-x-3">
                     <span className={`px-4 py-2 rounded-full text-xs font-black uppercase ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                        booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
+                      booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
                       }`}>
                       {booking.status}
                     </span>
+                    <button
+                      onClick={() => {
+                        setChatUser({
+                          id: booking.teacherId || booking._id,
+                          name: booking.teacherName,
+                          role: 'teacher'
+                        });
+                        setShowChatModal(true);
+                      }}
+                      className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                      title="Chat with teacher"
+                    >
+                      <MessageSquare size={20} />
+                    </button>
                     <button className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all text-sm shadow-lg">
                       Join Class
                     </button>
@@ -313,6 +444,20 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Chat Modal */}
+      {showChatModal && chatUser && (
+        <ChatModal
+          isOpen={showChatModal}
+          onClose={() => {
+            setShowChatModal(false);
+            setChatUser(null);
+          }}
+          otherUserId={chatUser.id}
+          otherUserName={chatUser.name}
+          otherUserRole={chatUser.role}
+        />
+      )}
     </div>
   );
 };

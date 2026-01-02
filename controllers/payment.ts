@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Payment, Booking } from '../models';
+import { BookingPackage } from '../models/BookingPackage';
 import { createRazorpayOrder, verifyRazorpaySignature } from '../services/razorpay';
 import { AuthRequest } from '../middleware/auth';
 
@@ -14,10 +15,23 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
             return res.status(400).json({ error: 'Booking ID and amount are required' });
         }
 
-        // Verify booking exists
-        const booking = await Booking.findById(bookingId);
+        // Try to find either a regular booking or a package booking
+        let booking = await Booking.findById(bookingId);
+        let bookingPackage = null;
+        let studentEmail = '';
+        let studentName = '';
+
         if (!booking) {
-            return res.status(404).json({ error: 'Booking not found' });
+            // Check if it's a package booking
+            bookingPackage = await BookingPackage.findById(bookingId);
+            if (!bookingPackage) {
+                return res.status(404).json({ error: 'Booking not found' });
+            }
+            studentEmail = bookingPackage.studentId;
+            studentName = bookingPackage.studentName;
+        } else {
+            studentEmail = booking.studentEmail;
+            studentName = booking.studentName;
         }
 
         // Create Razorpay order
@@ -29,9 +43,9 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
 
         // Save payment record
         const payment = new Payment({
-            userId: req.user?.userId || booking.studentEmail,
-            userName: booking.studentName,
-            userEmail: booking.studentEmail,
+            userId: req.user?.userId || studentEmail,
+            userName: studentName,
+            userEmail: studentEmail,
             bookingId,
             razorpayOrderId: order.id,
             amount,
@@ -41,10 +55,16 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
 
         await payment.save();
 
-        // Update booking with order ID
-        booking.razorpayOrderId = order.id;
-        booking.status = 'pending';
-        await booking.save();
+        // Update booking or package with order ID
+        if (booking) {
+            booking.razorpayOrderId = order.id;
+            booking.status = 'pending';
+            await booking.save();
+        } else if (bookingPackage) {
+            bookingPackage.razorpayOrderId = order.id;
+            bookingPackage.paymentStatus = 'pending';
+            await bookingPackage.save();
+        }
 
         res.json({
             orderId: order.id,
@@ -89,19 +109,29 @@ export const verifyPayment = async (req: Request, res: Response): Promise<any> =
             await payment.save();
         }
 
-        // Update booking
-        const booking = await Booking.findById(bookingId);
+        // Try to update booking or package
+        let booking = await Booking.findById(bookingId);
+        let bookingPackage = null;
+
         if (booking) {
             booking.razorpayPaymentId = razorpay_payment_id;
             booking.razorpaySignature = razorpay_signature;
             booking.status = 'confirmed';
             await booking.save();
+        } else {
+            bookingPackage = await BookingPackage.findById(bookingId);
+            if (bookingPackage) {
+                bookingPackage.razorpayPaymentId = razorpay_payment_id;
+                bookingPackage.razorpaySignature = razorpay_signature;
+                bookingPackage.paymentStatus = 'paid';
+                await bookingPackage.save();
+            }
         }
 
         res.json({
             success: true,
             message: 'Payment verified successfully',
-            booking
+            booking: booking || bookingPackage
         });
     } catch (error) {
         console.error('Verify payment error:', error);
@@ -141,11 +171,19 @@ export const handlePaymentFailure = async (req: Request, res: Response): Promise
             await payment.save();
         }
 
-        // Update booking status
-        const booking = await Booking.findById(bookingId);
+        // Try to update booking or package status
+        let booking = await Booking.findById(bookingId);
+        let bookingPackage = null;
+
         if (booking) {
             booking.status = 'cancelled';
             await booking.save();
+        } else {
+            bookingPackage = await BookingPackage.findById(bookingId);
+            if (bookingPackage) {
+                bookingPackage.paymentStatus = 'failed';
+                await bookingPackage.save();
+            }
         }
 
         res.json({ message: 'Payment failure recorded' });
