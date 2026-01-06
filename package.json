@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "server:dev": "tsx --watch server.ts",
-    "server:build": "tsc server.ts --outDir dist"
+    "server:build": "tsc --project tsconfig.server.json"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",

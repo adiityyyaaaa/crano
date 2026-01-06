@@ -110,7 +110,7 @@ export const createPackage = async (req: AuthRequest, res: Response): Promise<an
         const sessions = await Promise.all(
             slots.map(slot =>
                 PackageSession.create({
-                    packageId: bookingPackage._id,
+                    packageId: bookingPackage._id.toString(),
                     studentId: req.user!.userId,
                     teacherId,
                     scheduledDate: new Date(slot.date),

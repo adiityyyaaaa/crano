@@ -1,0 +1,43 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "CommonJS",
+        "lib": [
+            "ES2022"
+        ],
+        "outDir": "./dist",
+        "rootDir": "./",
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "downlevelIteration": true,
+        "resolveJsonModule": true,
+        "skipLibCheck": true,
+        "strict": false,
+        "types": [
+            "node"
+        ],
+        "experimentalDecorators": true
+    },
+    "include": [
+        "server.ts",
+        "db.ts",
+        "controllers/**/*",
+        "middleware/**/*",
+        "models/**/*",
+        "routes/**/*",
+        "services/**/*",
+        "utils/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "**/*.tsx",
+        "**/*.jsx",
+        "App.tsx",
+        "index.tsx",
+        "components",
+        "pages",
+        "vite.config.ts"
+    ]
+}
