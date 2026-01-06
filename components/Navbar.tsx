@@ -63,7 +63,7 @@ const Navbar: React.FC<NavbarProps> = ({ onJoinClick }) => {
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         <Link to="/" className="flex items-center group">
           <img
-            src="/crano-logo.jpg"
+            src="/assets/crano-logo.png"
             alt="Crano Logo"
             className="h-10 md:h-12 w-auto transform transition-transform group-hover:scale-105"
           />

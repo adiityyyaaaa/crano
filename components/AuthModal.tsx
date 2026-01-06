@@ -72,7 +72,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center mb-6">
               <img
-                src="https://storage.googleapis.com/msgsndr/hSwzFFLaSP5BofYFejKD/media/678665f8c85748805f15ca9d.png"
+                src="/assets/crano-logo.png"
                 alt="Crano Logo"
                 className="h-12 w-auto"
               />

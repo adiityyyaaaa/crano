@@ -31,7 +31,7 @@ const Footer = () => (
       <div>
         <div className="flex items-center mb-6">
           <img
-            src="https://storage.googleapis.com/msgsndr/hSwzFFLaSP5BofYFejKD/media/678665f8c85748805f15ca9d.png"
+            src="/assets/crano-logo.png"
             alt="Crano Logo"
             className="h-10 w-auto brightness-0 invert"
           />
