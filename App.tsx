@@ -33,7 +33,7 @@ const Footer = () => (
           <img
             src="/assets/crano-logo.png"
             alt="Crano Logo"
-            className="h-24 w-auto brightness-0 invert"
+            className="h-18 w-auto brightness-0 invert"
           />
         </div>
         <p className="text-slate-400 leading-relaxed">
