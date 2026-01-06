@@ -158,7 +158,7 @@ const TeacherProfile: React.FC = () => {
         const dateStr = selectedDate.toISOString().split('T')[0];
 
         // Fetch available slots
-        const slotsResponse = await fetch(`/api/teachers/${teacher._id}/availability?date=${dateStr}`);
+        const slotsResponse = await fetch(getApiUrl(`api/teachers/${teacher._id}/availability?date=${dateStr}`));
 
         if (slotsResponse.ok) {
           const data = await slotsResponse.json();
@@ -179,7 +179,7 @@ const TeacherProfile: React.FC = () => {
         }
 
         // Fetch all bookings for this teacher on this date
-        const bookingsResponse = await fetch(`/api/bookings/${teacher._id}`);
+        const bookingsResponse = await fetch(getApiUrl(`api/bookings/${teacher._id}`));
         if (bookingsResponse.ok) {
           const allBookings = await bookingsResponse.json();
           // Filter bookings for selected date and create a map
@@ -216,7 +216,7 @@ const TeacherProfile: React.FC = () => {
       const finalPrice = totalPrice * (1 - discount / 100);
 
       // Create package
-      const response = await fetch('/api/packages/create', {
+      const response = await fetch(getApiUrl('api/packages/create'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -321,7 +321,7 @@ const TeacherProfile: React.FC = () => {
 
       const bookingDate = selectedDate ? selectedDate.toISOString().split('T')[0] : new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
-      const response = await fetch('/api/bookings', {
+      const response = await fetch(getApiUrl('api/bookings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -369,8 +369,8 @@ const TeacherProfile: React.FC = () => {
     const fetchTeacherAndBookings = async () => {
       try {
         const [teacherRes, bookingsRes] = await Promise.all([
-          fetch(`/api/teachers/${id}`),
-          fetch(`/api/bookings/${id}`)
+          fetch(getApiUrl(`api/teachers/${id}`)),
+          fetch(getApiUrl(`api/bookings/${id}`))
         ]);
 
         if (!teacherRes.ok) throw new Error('Teacher not found');

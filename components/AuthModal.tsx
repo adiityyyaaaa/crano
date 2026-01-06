@@ -1,6 +1,8 @@
 
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import { getApiUrl } from '../utils/api';
+
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -21,7 +23,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
     setIsLoading(true);
     setError(null);
 
-    const endpoint = isSignUp ? '/api/auth/register' : '/api/auth/login';
+    const endpoint = isSignUp ? getApiUrl('api/auth/register') : getApiUrl('api/auth/login');
     const payload = isSignUp
       ? { ...formData, role: 'student' }
       : { email: formData.email, password: formData.password };

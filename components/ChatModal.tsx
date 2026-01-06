@@ -44,7 +44,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, otherUserId, oth
     const fetchMessages = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`/api/chat/conversation/${otherUserId}`, {
+            const response = await fetch(getApiUrl(`api/chat/conversation/${otherUserId}`), {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -66,7 +66,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, otherUserId, oth
         setSending(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('/api/chat/send', {
+            const response = await fetch(getApiUrl('api/chat/send'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

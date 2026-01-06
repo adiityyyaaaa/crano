@@ -42,7 +42,7 @@ const Dashboard: React.FC = () => {
     if (role === 'student') {
       const fetchBookings = async () => {
         try {
-          const url = `/api/bookings/student/${encodeURIComponent(userName)}`;
+          const url = getApiUrl(`api/bookings/student/${encodeURIComponent(userName)}`);
           const response = await fetch(url);
 
           if (response.ok) {
@@ -81,21 +81,21 @@ const Dashboard: React.FC = () => {
           }
 
           // Fetch all teachers to find current teacher
-          const teachersRes = await fetch('/api/teachers');
+          const teachersRes = await fetch(getApiUrl('api/teachers'));
           if (teachersRes.ok) {
             const teachers = await teachersRes.json();
             const currentTeacher = teachers.find((t: any) => String(t.userId) === userId);
 
             if (currentTeacher) {
               // Fetch bookings
-              const bookingsRes = await fetch(`/api/bookings/${currentTeacher._id}`);
+              const bookingsRes = await fetch(getApiUrl(`api/bookings/${currentTeacher._id}`));
               if (bookingsRes.ok) {
                 const bookingsData = await bookingsRes.json();
                 setTeacherBookings(bookingsData);
               }
 
               // Fetch stats
-              const statsRes = await fetch(`/api/teachers/${currentTeacher._id}/stats`);
+              const statsRes = await fetch(getApiUrl(`api/teachers/${currentTeacher._id}/stats`));
               if (statsRes.ok) {
                 const statsData = await statsRes.json();
                 setTeacherStats(statsData);

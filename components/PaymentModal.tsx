@@ -62,7 +62,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
 
         try {
             // Create Razorpay order
-            const orderResponse = await fetch('/api/payment/create-order', {
+            const orderResponse = await fetch(getApiUrl('api/payment/create-order'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -88,7 +88,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
                 handler: async function (response: any) {
                     try {
                         // Verify payment
-                        const verifyResponse = await fetch('/api/payment/verify', {
+                        const verifyResponse = await fetch(getApiUrl('api/payment/verify'), {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -122,7 +122,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onPaymentS
                     ondismiss: function () {
                         setPaymentStatus('idle');
                         // Record payment failure
-                        fetch('/api/payment/failure', {
+                        fetch(getApiUrl('api/payment/failure'), {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({

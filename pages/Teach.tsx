@@ -16,6 +16,7 @@ import {
   User
 } from 'lucide-react';
 import { GRADES } from '../constants';
+import { getApiUrl } from '../utils/api';
 
 const DAYS_OPTIONS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -54,7 +55,7 @@ const Teach: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
-    const endpoint = isSignInMode ? '/api/auth/login' : '/api/auth/register';
+    const endpoint = isSignInMode ? getApiUrl('api/auth/login') : getApiUrl('api/auth/register');
     const payload = isSignInMode
       ? { email: formData.email, password: formData.password }
       : {

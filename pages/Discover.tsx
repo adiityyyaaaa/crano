@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { Search, Star, Play, Video, ArrowRight, GraduationCap, Info, ChevronDown, Loader2 } from 'lucide-react';
 import { SUBJECTS, GRADES } from '../constants';
+import { getApiUrl } from '../utils/api';
 
 interface Teacher {
   _id: string; // MongoDB _id
@@ -54,7 +55,7 @@ const Discover: React.FC = () => {
   useEffect(() => {
     const fetchTeachers = async () => {
       try {
-        const response = await fetch('/api/teachers');
+        const response = await fetch(getApiUrl('api/teachers'));
         if (response.ok) {
           const data = await response.json();
           setTeachers(data);
