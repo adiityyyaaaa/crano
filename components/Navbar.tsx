@@ -65,7 +65,7 @@ const Navbar: React.FC<NavbarProps> = ({ onJoinClick }) => {
           <img
             src="/assets/crano-logo.png"
             alt="Crano Logo"
-            className="h-14 md:h-16 w-auto transform transition-transform group-hover:scale-105"
+            className="h-20 md:h-24 w-auto transform transition-transform group-hover:scale-105"
           />
         </Link>
 
