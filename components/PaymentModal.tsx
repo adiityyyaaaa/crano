@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, CreditCard, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { getApiUrl } from '../utils/api';
 
 interface PaymentModalProps {
     isOpen: boolean;

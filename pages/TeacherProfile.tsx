@@ -6,6 +6,7 @@ import ChatModal from '../components/ChatModal';
 import PackageSelector from '../components/PackageSelector';
 import DaySelector from '../components/DaySelector';
 import BookingSummary from '../components/BookingSummary';
+import { getApiUrl } from '../utils/api';
 import {
   Star,
   Video,

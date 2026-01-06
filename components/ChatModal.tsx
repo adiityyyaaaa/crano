@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Loader2, MessageCircle } from 'lucide-react';
+import { getApiUrl } from '../utils/api';
 
 interface ChatModalProps {
     isOpen: boolean;
@@ -131,8 +132,8 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, otherUserId, oth
                                 <div key={msg._id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
                                         <div className={`rounded-2xl px-4 py-3 ${isOwn
-                                                ? 'bg-blue-600 text-white rounded-br-sm'
-                                                : 'bg-white border border-slate-200 text-slate-900 rounded-bl-sm'
+                                            ? 'bg-blue-600 text-white rounded-br-sm'
+                                            : 'bg-white border border-slate-200 text-slate-900 rounded-bl-sm'
                                             }`}>
                                             <p className="text-sm leading-relaxed">{msg.content}</p>
                                         </div>
@@ -162,8 +163,8 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, otherUserId, oth
                             type="submit"
                             disabled={!newMessage.trim() || sending}
                             className={`p-3 rounded-xl font-bold transition-all flex items-center justify-center ${newMessage.trim() && !sending
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-100'
-                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-100'
+                                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                                 }`}
                         >
                             {sending ? (

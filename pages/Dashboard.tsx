@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ChatModal from '../components/ChatModal';
+import { getApiUrl } from '../utils/api';
 import {
   Calendar,
   Clock,
@@ -306,8 +307,8 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="flex items-center space-x-3">
                       <span className={`px-4 py-2 rounded-full text-xs font-black uppercase ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                          booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-red-100 text-red-700'
+                        booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-red-100 text-red-700'
                         }`}>
                         {booking.status}
                       </span>
