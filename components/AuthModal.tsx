@@ -74,7 +74,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
               <img
                 src="/assets/crano-logo.png"
                 alt="Crano Logo"
-                className="h-22 w-auto"
+                className="h-14 w-auto"
               />
             </div>
             <h2 className="text-3xl font-black text-slate-900 mb-2">
