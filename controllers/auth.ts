@@ -1,8 +1,8 @@
 
 import { Request, Response } from 'express';
-import { User, Teacher } from '../models';
-import { hashPassword, comparePassword } from '../utils/auth';
-import { generateToken } from '../middleware/auth';
+import { User, Teacher } from '../models.js';
+import { hashPassword, comparePassword } from '../utils/auth.js';
+import { generateToken } from '../middleware/auth.js';
 
 export const register = async (req: Request, res: Response): Promise<any> => {
   const { name, email, password, role } = req.body;

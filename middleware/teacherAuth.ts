@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
-import { Teacher } from '../models';
-import { AuthRequest } from './auth';
+import { Teacher } from '../models.js';
+import { AuthRequest } from './auth.js';
 
 /**
  * Middleware to verify user is a registered teacher

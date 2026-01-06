@@ -2,13 +2,13 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { connectDB } from './db';
-import authRoutes from './routes/auth';
-import bookingRoutes from './routes/booking';
-import teacherRoutes from './routes/teacher';
-import paymentRoutes from './routes/payment';
-import chatRoutes from './routes/chat';
-import packageRoutes from './routes/package';
+import { connectDB } from './db.js';
+import authRoutes from './routes/auth.js';
+import bookingRoutes from './routes/booking.js';
+import teacherRoutes from './routes/teacher.js';
+import paymentRoutes from './routes/payment.js';
+import chatRoutes from './routes/chat.js';
+import packageRoutes from './routes/package.js';
 
 // Load environment variables
 dotenv.config();

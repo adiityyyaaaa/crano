@@ -1,8 +1,8 @@
 
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import { Booking } from '../models';
-import { isTeacherAvailable } from '../services/availability';
+import { Booking } from '../models.js';
+import { isTeacherAvailable } from '../services/availability.js';
 
 export const createBooking = async (req: Request, res: Response): Promise<any> => {
   const { teacherId, teacherName, studentName, studentEmail, subject, date, time, price } = req.body;

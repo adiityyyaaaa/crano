@@ -3,8 +3,8 @@
  * Handles slot booking, checking, and conflict detection
  */
 
-import { SlotAvailability } from '../models/SlotAvailability';
-import { PackageSession } from '../models/PackageSession';
+import { SlotAvailability } from '../models/SlotAvailability.js';
+import { PackageSession } from '../models/PackageSession.js';
 
 interface TimeSlot {
     date: string;

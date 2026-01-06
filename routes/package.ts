@@ -6,8 +6,8 @@ import {
     getStudentPackages,
     cancelPackage,
     updatePaymentStatus
-} from '../controllers/package';
-import { authenticateToken } from '../middleware/auth';
+} from '../controllers/package.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 

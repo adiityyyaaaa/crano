@@ -1,8 +1,8 @@
 
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import { Teacher, Booking } from '../models';
-import { getAvailableSlots, getFormattedTimeSlots } from '../services/availability';
+import { Teacher, Booking } from '../models.js';
+import { getAvailableSlots, getFormattedTimeSlots } from '../services/availability.js';
 
 export const getAllTeachers = async (req: Request, res: Response): Promise<any> => {
     try {

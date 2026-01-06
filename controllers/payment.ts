@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { Payment, Booking } from '../models';
-import { BookingPackage } from '../models/BookingPackage';
-import { createRazorpayOrder, verifyRazorpaySignature } from '../services/razorpay';
-import { AuthRequest } from '../middleware/auth';
+import { Payment, Booking } from '../models.js';
+import { BookingPackage } from '../models/BookingPackage.js';
+import { createRazorpayOrder, verifyRazorpaySignature } from '../services/razorpay.js';
+import { AuthRequest } from '../middleware/auth.js';
 
 /**
  * Create a Razorpay order for booking payment

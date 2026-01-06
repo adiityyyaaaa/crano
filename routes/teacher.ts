@@ -1,6 +1,6 @@
 
 import express from 'express';
-import { getAllTeachers, getTeacherById, updateTeacher, getTeacherAvailability, getTeacherStats } from '../controllers/teacher';
+import { getAllTeachers, getTeacherById, updateTeacher, getTeacherAvailability, getTeacherStats } from '../controllers/teacher.js';
 
 const router = express.Router();
 

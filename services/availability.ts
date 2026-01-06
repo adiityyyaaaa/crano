@@ -1,4 +1,4 @@
-import { Teacher, Booking } from '../models';
+import { Teacher, Booking } from '../models.js';
 
 export interface TimeSlot {
     hour: string;

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { Message } from '../models/Message';
-import { AuthRequest } from '../middleware/auth';
+import { Message } from '../models/Message.js';
+import { AuthRequest } from '../middleware/auth.js';
 
 /**
  * Send a message

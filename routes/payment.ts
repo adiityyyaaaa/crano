@@ -1,6 +1,6 @@
 import express from 'express';
-import { createOrder, verifyPayment, getPaymentHistory, handlePaymentFailure } from '../controllers/payment';
-import { authenticateToken } from '../middleware/auth';
+import { createOrder, verifyPayment, getPaymentHistory, handlePaymentFailure } from '../controllers/payment.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 

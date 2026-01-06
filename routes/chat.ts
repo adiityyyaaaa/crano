@@ -1,6 +1,6 @@
 import express from 'express';
-import { sendMessage, getConversation, getConversations, markAsRead } from '../controllers/chat';
-import { authenticateToken } from '../middleware/auth';
+import { sendMessage, getConversation, getConversations, markAsRead } from '../controllers/chat.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 

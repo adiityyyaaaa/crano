@@ -1,6 +1,6 @@
 
 import express from 'express';
-import { createBooking, getBookingsByTeacher, getBookingsByStudentName, cancelBooking, updateBookingStatus } from '../controllers/booking';
+import { createBooking, getBookingsByTeacher, getBookingsByStudentName, cancelBooking, updateBookingStatus } from '../controllers/booking.js';
 
 const router = express.Router();
 

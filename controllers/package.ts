@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { BookingPackage } from '../models/BookingPackage';
-import { PackageSession } from '../models/PackageSession';
-import { SlotService } from '../services/slotService';
-import { PricingService } from '../services/pricingService';
-import { AuthRequest } from '../middleware/auth';
+import { BookingPackage } from '../models/BookingPackage.js';
+import { PackageSession } from '../models/PackageSession.js';
+import { SlotService } from '../services/slotService.js';
+import { PricingService } from '../services/pricingService.js';
+import { AuthRequest } from '../middleware/auth.js';
 
 /**
  * Check availability for package booking
