@@ -22,7 +22,7 @@ connectDB();
 // CORS Configuration
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://yourdomain.com'] // Replace with your production domain
+    ? ['https://crano.site', 'https://www.crano.site']
     : ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'],
   credentials: true,
   optionsSuccessStatus: 200
