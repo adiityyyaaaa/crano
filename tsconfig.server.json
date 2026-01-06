@@ -38,6 +38,7 @@
         "index.tsx",
         "components",
         "pages",
-        "vite.config.ts"
+        "vite.config.ts",
+        "utils"
     ]
 }
